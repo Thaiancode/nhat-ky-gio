@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nhật ký giờ</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#2f6f5e">
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--ink:#1d1d1b;--mute:#6b6a64;--line:#e3e1d9;--acc:#2f6f5e;--warn:#c2410c}
+@media(prefers-color-scheme:dark){:root{--bg:#141413;--card:#1e1e1c;--ink:#f0eee8;--mute:#9a988f;--line:#333230;--acc:#5fb59d;--warn:#fb923c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif;padding:16px;max-width:720px;margin:auto;padding-bottom:110px}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:24px 0 8px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
+label{display:block;font-size:13px;color:var(--mute);margin-top:8px}
+input,textarea,select{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+textarea{min-height:56px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+button{font:inherit;border:0;border-radius:10px;padding:10px 14px;background:var(--acc);color:#fff;cursor:pointer}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+#mic{width:100%;padding:18px;font-size:18px}
+#mic.on{background:var(--warn)}
+.hint{font-size:13px;color:var(--mute)}
+.entry .t{font-weight:600}.entry .m{font-size:14px;color:var(--mute)}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;background:var(--bg);border:1px solid var(--line);font-size:12px;margin-right:4px}
+#idea{position:fixed;right:16px;bottom:16px;border-radius:99px;padding:16px 20px;box-shadow:0 4px 14px #0004;background:var(--warn)}
+#idea.on{outline:4px solid #fff8}
+#breath{width:110px;height:110px;border-radius:50%;background:var(--acc);margin:12px auto;opacity:.5;transition:transform 4s ease-in-out}
+.center{text-align:center}
+.bars{display:flex;align-items:flex-end;gap:3px;height:140px;padding-top:8px}
+.bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;font-size:10px;color:var(--mute)}
+.bar i{display:block;width:100%;border-radius:4px 4px 0 0;background:var(--acc);min-height:2px}
+.bar.lo i{background:var(--warn)}
+#report{white-space:pre-wrap;font-size:15px}
+</style>
+</head>
+<body>
+<h1>Nhật ký giờ</h1>
+<div class="hint" id="clock"></div>
+
+<h2>Ghi bằng giọng nói</h2>
+<div class="card">
+  <button id="mic">🎙️ Bấm và nói</button>
+  <p class="hint">Ví dụ: “<i>Hoạt động viết báo cáo, ý nghĩa là hoàn thành dự án, năng lượng 7, còn lại 20 phút, suy nghĩ nên chia nhỏ việc</i>”. Từ khóa: <b>hoạt động · ý nghĩa · năng lượng · còn lại · suy nghĩ</b>. Nói “<b>ý tưởng …</b>” để lưu thẳng vào hộp ý tưởng.</p>
+  <label>Văn bản nhận được</label>
+  <textarea id="raw" placeholder="Hoặc gõ vào đây rồi bấm Phân tích"></textarea>
+  <button class="ghost" id="parse" style="margin-top:8px">Phân tích vào các ô</button>
+</div>
+
+<div class="card">
+  <div class="row">
+    <div><label>Từ</label><input type="time" id="from"></div>
+    <div><label>Đến</label><input type="time" id="to"></div>
+    <div><label>Còn lại (phút)</label><input type="number" id="rem" min="0"></div>
+  </div>
+  <label>Hoạt động đang làm</label><textarea id="act"></textarea>
+  <label>Ý nghĩa của hoạt động</label><textarea id="mean"></textarea>
+  <label>Suy nghĩ lúc này</label><textarea id="thought"></textarea>
+  <label>Năng lượng: <b id="enV">5</b>/10</label><input type="range" id="en" min="1" max="10" value="5">
+  <button id="save" style="margin-top:12px;width:100%">Lưu vào nhật ký</button>
+</div>
+
+<h2>Hộp ý tưởng chợt lóe</h2>
+<div class="card"><div id="ideas"></div></div>
+
+<h2>Suy niệm</h2>
+<div class="card center">
+  <div id="breath"></div>
+  <div id="bt" class="hint">Thở vào 4 giây – thở ra 4 giây</div>
+  <div class="row" style="margin-top:8px">
+    <select id="dur"><option value="60">1 phút</option><option value="180" selected>3 phút</option><option value="300">5 phút</option></select>
+    <button id="bstart">Bắt đầu</button>
+  </div>
+  <p class="hint" style="text-align:left">Sau khi xong, tự hỏi: <i>Mình đang cảm thấy gì? Điều gì thật sự quan trọng lúc này? Việc kế tiếp nhỏ nhất là gì?</i> Rồi nói vào mic để lưu.</p>
+</div>
+
+<h2>Nhắc giờ</h2>
+<div class="card">
+  <div class="row">
+    <div><label>Từ giờ</label><select id="rs"></select></div>
+    <div><label>Đến giờ</label><select id="re"></select></div>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <button id="rn">Bật nhắc trong app</button>
+    <button class="ghost" id="ics">Tạo nhắc qua Lịch</button>
+  </div>
+  <p class="hint" id="rstat"></p>
+  <p class="hint"><b>Nhắc trong app</b> chỉ chạy khi app còn mở/chạy nền. <b>Nhắc qua Lịch</b> chạy chắc chắn kể cả khi tắt app: bấm nút, mở file .ics tải về bằng Google Lịch, mỗi giờ sẽ có thông báo kèm đường dẫn mở thẳng app.</p>
+</div>
+
+<h2>Thống kê năng lượng</h2>
+<div class="card">
+  <select id="range"><option value="1">Hôm nay</option><option value="7" selected>7 ngày qua</option><option value="30">30 ngày qua</option></select>
+  <div class="bars" id="bars"></div>
+  <div class="hint">Trung bình năng lượng (1–10) theo giờ trong ngày</div>
+  <h2 style="margin-top:16px">Báo cáo</h2>
+  <div id="report"></div>
+  <div class="row" style="margin-top:10px"><button class="ghost" id="rcopy">Sao chép báo cáo</button><button class="ghost" id="rshare">Chia sẻ</button></div>
+</div>
+
+<h2>Nhật ký hôm nay</h2>
+<div id="log"></div>
+<div class="row"><button class="ghost" id="exp">Tải CSV</button><button class="ghost" id="clr">Xóa hôm nay</button></div>
+
+<button id="idea">⚡ Ý tưởng</button>
+
+<script>
+const $=id=>document.getElementById(id);
+const store={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const today=()=>new Date().toISOString().slice(0,10);
+const pad=n=>String(n).padStart(2,'0');
+const hm=d=>pad(d.getHours())+':'+pad(d.getMinutes());
+let entries=store.get('entries',[]), ideas=store.get('ideas',[]);
+
+// --- khung giờ & thời gian còn lại
+function defaultSlot(){const n=new Date();$('from').value=pad(n.getHours())+':00';$('to').value=pad((n.getHours()+1)%24)+':00';calcRem()}
+function calcRem(){const n=new Date(),[h,m]=$('to').value.split(':').map(Number);let e=new Date(n);e.setHours(h,m,0,0);if(e<n&&h===0)e.setDate(e.getDate()+1);$('rem').value=Math.max(0,Math.round((e-n)/60000))}
+$('to').onchange=calcRem;
+setInterval(()=>{$('clock').textContent=new Date().toLocaleString('vi-VN')},1000);
+$('en').oninput=()=>$('enV').textContent=$('en').value;
+
+// --- phân tích lời nói
+const LABELS=[
+ ['act',['hoạt động','đang làm','công việc']],
+ ['mean',['ý nghĩa','mục đích']],
+ ['en',['năng lượng']],
+ ['rem',['còn lại','thời gian còn lại']],
+ ['thought',['suy nghĩ','cảm nhận','chợt nghĩ']],
+ ['idea',['ý tưởng']]
+];
+const ENW={'rất thấp':1,'thấp':3,'yếu':3,'trung bình':5,'bình thường':5,'khá':6,'tốt':7,'cao':8,'rất cao':10,'tràn đầy':10};
+function parse(t){
+  const all=[];LABELS.forEach(([k,ws])=>ws.forEach(w=>all.push([k,w])));
+  all.sort((a,b)=>b[1].length-a[1].length);
+  const re=new RegExp('('+all.map(a=>a[1]).join('|')+')','gi');
+  const hits=[];let m;
+  while((m=re.exec(t))){hits.push({k:all.find(a=>a[1]===m[1].toLowerCase())[0],i:m.index,e:m.index+m[0].length})}
+  const out={};
+  if(!hits.length){out.act=t.trim();return out}
+  if(hits[0].i>0){const pre=t.slice(0,hits[0].i).trim();if(pre)out.act=pre}
+  hits.forEach((h,j)=>{
+    let v=t.slice(h.e,hits[j+1]?hits[j+1].i:undefined).replace(/^[\s,:.\-–]*(là|:)?\s*/i,'').replace(/[\s,.]+$/,'');
+    out[h.k]=(out[h.k]?out[h.k]+' ':'')+v;
+  });
+  return out;
+}
+function num(s){const d=s.match(/\d+/);if(d)return +d[0];for(const w in ENW)if(s.includes(w))return ENW[w];return null}
+function apply(o){
+  if(o.idea!==undefined&&!o.act&&!o.mean&&!o.thought){addIdea(o.idea);return 'idea'}
+  if(o.idea)addIdea(o.idea);
+  if(o.act)$('act').value=o.act;
+  if(o.mean)$('mean').value=o.mean;
+  if(o.thought)$('thought').value=o.thought;
+  if(o.en){const n=num(o.en);if(n){$('en').value=Math.min(10,n);$('enV').textContent=$('en').value}}
+  if(o.rem){const n=num(o.rem);if(n!=null)$('rem').value=n}
+}
+$('parse').onclick=()=>apply(parse($('raw').value));
+
+// --- nhận diện giọng nói
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+function listen(btn,onDone,onLive){
+  if(!SR){alert('Trình duyệt này chưa hỗ trợ nhận diện giọng nói. Hãy dùng Chrome hoặc Edge.');return}
+  const r=new SR();r.lang='vi-VN';r.interimResults=true;r.continuous=false;
+  let final='';btn.classList.add('on');
+  r.onresult=e=>{let s='';for(const x of e.results)s+=x[0].transcript+' ';final=s.trim();onLive&&onLive(final)};
+  r.onend=()=>{btn.classList.remove('on');onDone(final)};
+  r.onerror=e=>{btn.classList.remove('on');if(e.error==='not-allowed')alert('Hãy cho phép quyền micro.')};
+  r.start();return r;
+}
+let cur=null;
+$('mic').onclick=()=>{
+  if(cur){cur.stop();cur=null;return}
+  $('mic').textContent='⏹ Đang nghe… bấm để dừng';
+  cur=listen($('mic'),t=>{cur=null;$('mic').textContent='🎙️ Bấm và nói';if(t){$('raw').value=t;apply(parse(t))}},t=>$('raw').value=t);
+};
+// nút ý tưởng nhanh: bấm 1 lần để nói, lưu ngay
+let ir=null;
+$('idea').onclick=()=>{
+  if(ir){ir.stop();ir=null;return}
+  $('idea').textContent='⏹ Dừng';
+  ir=listen($('idea'),t=>{ir=null;$('idea').textContent='⚡ Ý tưởng';if(t)addIdea(t.replace(/^ý tưởng[\s,:]*/i,''))});
+};
+function addIdea(t){if(!t)return;ideas.unshift({t,at:new Date().toISOString()});store.set('ideas',ideas);renderIdeas()}
+function renderIdeas(){
+  $('ideas').innerHTML=ideas.length?ideas.slice(0,30).map((x,i)=>`<div class="entry" style="padding:6px 0;border-bottom:1px solid var(--line)"><span class="pill">${new Date(x.at).toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'})}</span>${esc(x.t)} <a href="#" data-i="${i}" style="float:right;color:var(--mute)">xóa</a></div>`).join(''):'<span class="hint">Chưa có ý tưởng nào. Bấm ⚡ ở góc phải để nói nhanh.</span>';
+  $('ideas').querySelectorAll('a').forEach(a=>a.onclick=e=>{e.preventDefault();ideas.splice(+a.dataset.i,1);store.set('ideas',ideas);renderIdeas()});
+}
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+// --- lưu nhật ký
+$('save').onclick=()=>{
+  if(!$('act').value.trim()&&!$('thought').value.trim())return alert('Hãy nhập ít nhất hoạt động hoặc suy nghĩ.');
+  entries.push({d:today(),from:$('from').value,to:$('to').value,rem:$('rem').value,act:$('act').value,mean:$('mean').value,thought:$('thought').value,en:$('en').value,at:new Date().toISOString()});
+  store.set('entries',entries);['act','mean','thought','raw'].forEach(i=>$(i).value='');defaultSlot();renderLog();
+};
+function renderLog(){
+  const list=entries.filter(e=>e.d===today());
+  $('log').innerHTML=list.length?list.slice().reverse().map(e=>`<div class="card entry"><div class="t">${e.from}–${e.to} · ${esc(e.act||'(không ghi hoạt động)')}</div>
+  <div class="m"><span class="pill">⚡ ${e.en}/10</span><span class="pill">còn ${e.rem||0}′</span></div>
+  ${e.mean?`<div><b>Ý nghĩa:</b> ${esc(e.mean)}</div>`:''}${e.thought?`<div><b>Suy nghĩ:</b> ${esc(e.thought)}</div>`:''}</div>`).join(''):'<div class="hint">Hôm nay chưa có bản ghi.</div>';
+}
+$('exp').onclick=()=>{
+  const q=s=>'"'+String(s||'').replace(/"/g,'""')+'"';
+  const csv='﻿Ngày,Từ,Đến,Còn lại,Hoạt động,Ý nghĩa,Suy nghĩ,Năng lượng\n'+entries.map(e=>[e.d,e.from,e.to,e.rem,e.act,e.mean,e.thought,e.en].map(q).join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='nhat-ky.csv';a.click();
+};
+$('clr').onclick=()=>{if(confirm('Xóa toàn bộ bản ghi hôm nay?')){entries=entries.filter(e=>e.d!==today());store.set('entries',entries);renderLog()}};
+
+// --- suy niệm (thở 4-4)
+let bt=null;
+$('bstart').onclick=()=>{
+  if(bt){clearInterval(bt);bt=null;$('bstart').textContent='Bắt đầu';$('breath').style.transform='';$('bt').textContent='Đã dừng.';return}
+  let left=+$('dur').value,inh=true;$('bstart').textContent='Dừng';
+  const step=()=>{$('breath').style.transform=inh?'scale(1.6)':'scale(1)';$('bt').textContent=(inh?'Thở vào…':'Thở ra…')+' còn '+left+'s';inh=!inh};
+  step();let c=0;
+  bt=setInterval(()=>{left--;c++;if(left<=0){clearInterval(bt);bt=null;$('bstart').textContent='Bắt đầu';$('breath').style.transform='';$('bt').textContent='Xong. Ghi lại điều bạn nhận ra bằng giọng nói.';return}
+    if(c%4===0)step();else $('bt').textContent=$('bt').textContent.replace(/còn \d+s/,'còn '+left+'s')},1000);
+};
+
+// --- thống kê & báo cáo
+const HL=h=>pad(h)+'h';
+function stats(){
+  const days=+$('range').value,cut=new Date();cut.setDate(cut.getDate()-days+1);const cs=cut.toISOString().slice(0,10);
+  const list=entries.filter(e=>e.d>=cs&&e.en);
+  const by={};list.forEach(e=>{const h=parseInt(e.from);(by[h]=by[h]||[]).push(+e.en)});
+  const avg={};for(const h in by)avg[h]=by[h].reduce((a,b)=>a+b,0)/by[h].length;
+  const hrs=Object.keys(avg).map(Number).sort((a,b)=>a-b);
+  const lo=hrs.length?Math.min(...hrs.map(h=>avg[h])):0;
+  $('bars').innerHTML=hrs.length?Array.from({length:24},(_,h)=>h).filter(h=>h>=Math.min(6,...hrs)&&h<=Math.max(22,...hrs)).map(h=>{const v=avg[h];return `<div class="bar ${v!==undefined&&v===lo&&hrs.length>2?'lo':''}"><span>${v!==undefined?v.toFixed(1):''}</span><i style="height:${v!==undefined?v*10:0}%"></i><span>${h}</span></div>`}).join(''):'<span class="hint">Chưa có dữ liệu.</span>';
+  if(!list.length){$('report').textContent='Chưa đủ dữ liệu. Hãy ghi năng lượng vài lần trong ngày.';return ''}
+  const all=list.map(e=>+e.en),mean=all.reduce((a,b)=>a+b,0)/all.length;
+  const ranked=hrs.slice().sort((a,b)=>avg[b]-avg[a]);
+  const f=h=>`${HL(h)}–${HL(h+1)} (${avg[h].toFixed(1)}/10, ${by[h].length} lần ghi)`;
+  let t=`BÁO CÁO NĂNG LƯỢNG – ${days===1?'hôm nay':days+' ngày qua'}\n`;
+  t+=`• ${list.length} lần ghi, trung bình ${mean.toFixed(1)}/10.\n`;
+  t+=`• Đỉnh năng lượng: ${ranked.slice(0,3).map(f).join('; ')}.\n`;
+  if(ranked.length>=6)t+=`• Thấp nhất: ${ranked.slice(-3).reverse().map(f).join('; ')}.\n`;
+  const hi=list.filter(e=>+e.en>=8&&e.act).map(e=>e.act);
+  const low=list.filter(e=>+e.en<=4&&e.act).map(e=>e.act);
+  if(hi.length)t+=`• Việc làm lúc sung sức: ${[...new Set(hi)].slice(0,4).join('; ')}.\n`;
+  if(low.length)t+=`• Việc làm lúc cạn sức: ${[...new Set(low)].slice(0,4).join('; ')}.\n`;
+  if(days>1){
+    const per={};list.forEach(e=>(per[e.d]=per[e.d]||[]).push(+e.en));
+    const ds=Object.keys(per).sort(),dm=ds.map(d=>per[d].reduce((a,b)=>a+b,0)/per[d].length);
+    if(ds.length>=4){const h=Math.floor(ds.length/2),a=dm.slice(0,h).reduce((x,y)=>x+y,0)/h,b=dm.slice(h).reduce((x,y)=>x+y,0)/(ds.length-h);
+      t+=`• Xu hướng: ${b>a+.3?'đang tăng':b<a-.3?'đang giảm':'ổn định'} (${a.toFixed(1)} → ${b.toFixed(1)}).\n`}
+  }
+  if(ranked.length>=3)t+=`\nGỢI Ý: đặt việc quan trọng/khó vào ${HL(ranked[0])}${ranked[1]!==undefined?' và '+HL(ranked[1]):''}; dành ${HL(ranked[ranked.length-1])} cho việc nhẹ, nghỉ ngơi hoặc suy niệm.`;
+  $('report').textContent=t;return t;
+}
+$('range').onchange=stats;
+$('rcopy').onclick=async()=>{try{await navigator.clipboard.writeText($('report').textContent);$('rcopy').textContent='Đã sao chép ✓'}catch(e){alert('Không sao chép được')}setTimeout(()=>$('rcopy').textContent='Sao chép báo cáo',1500)};
+$('rshare').onclick=()=>navigator.share?navigator.share({title:'Báo cáo năng lượng',text:$('report').textContent}).catch(()=>{}):$('rcopy').click();
+
+// --- nhắc giờ
+for(let h=0;h<24;h++){['rs','re'].forEach(id=>$(id).add(new Option(pad(h)+':00',h)))}
+const rc=store.get('remind',{on:false,s:8,e:21});$('rs').value=rc.s;$('re').value=rc.e;
+const saveR=()=>{rc.s=+$('rs').value;rc.e=+$('re').value;store.set('remind',rc);showR()};
+$('rs').onchange=$('re').onchange=saveR;
+function showR(){$('rstat').textContent=rc.on?`Đang bật: nhắc mỗi giờ từ ${rc.s}h đến ${rc.e}h.`:'Nhắc trong app đang tắt.';$('rn').textContent=rc.on?'Tắt nhắc trong app':'Bật nhắc trong app'}
+$('rn').onclick=async()=>{
+  if(!rc.on){
+    if(!('Notification' in window)){alert('Trình duyệt không hỗ trợ thông báo.');return}
+    if(await Notification.requestPermission()!=='granted'){alert('Bạn cần cho phép thông báo.');return}
+  }
+  rc.on=!rc.on;saveR();
+};
+let lastH=new Date().getHours();
+setInterval(async()=>{
+  const h=new Date().getHours();if(h===lastH)return;lastH=h;
+  if(!rc.on||h<rc.s||h>rc.e||Notification.permission!=='granted')return;
+  const opts={body:'Bạn đang làm gì? Năng lượng mấy trên 10? Bấm để nói.',tag:'hourly',icon:'icon-192.png',renotify:true};
+  try{const reg=await navigator.serviceWorker.ready;reg.showNotification('⚡ '+pad(h)+':00 – Ghi lại giờ này',opts)}catch(e){new Notification('⚡ '+pad(h)+':00 – Ghi lại giờ này',opts)}
+},20000);
+$('ics').onclick=()=>{
+  const url=location.href.split('?')[0]+'?log=1',d=new Date(),ymd=d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());
+  let s='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//NhatKyGio//VI\r\n';
+  for(let h=+$('rs').value;h<=+$('re').value;h++){
+    s+=`BEGIN:VEVENT\r\nUID:nkg-${h}@nhatkygio\r\nDTSTAMP:${ymd}T000000Z\r\nDTSTART:${ymd}T${pad(h)}0000\r\nDTEND:${ymd}T${pad(h)}0500\r\nRRULE:FREQ=DAILY\r\nSUMMARY:⚡ Ghi năng lượng ${pad(h)}h\r\nDESCRIPTION:Mở app và nói: ${url}\r\nURL:${url}\r\nBEGIN:VALARM\r\nACTION:DISPLAY\r\nDESCRIPTION:Ghi năng lượng\r\nTRIGGER:PT0M\r\nEND:VALARM\r\nEND:VEVENT\r\n`;
+  }
+  s+='END:VCALENDAR\r\n';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([s],{type:'text/calendar'}));a.download='nhac-gio.ics';a.click();
+};
+
+// --- lưu xong thì cập nhật thống kê
+const _render=renderLog;renderLog=function(){_render();stats()};
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+defaultSlot();renderIdeas();renderLog();showR();
+// mở từ phím tắt / thông báo
+const q=new URLSearchParams(location.search);
+if(q.get('idea'))setTimeout(()=>$('idea').click(),400);
+if(q.get('log'))setTimeout(()=>$('mic').click(),400);
+</script>
+</body>
+</html>
